@@ -20,6 +20,9 @@ dist/
 # AI pipeline outputs (regenerable) — keep the folder, ignore contents
 data/processed/*
 !data/processed/.gitkeep
+# ...but DO track the calibration profiles (they are inputs, fitted from real data)
+!data/processed/profiles/
+!data/processed/profiles/**
 
 # OS / editor
 .DS_Store

@@ -19,7 +19,10 @@ class Settings(BaseSettings):
 
     # Frozen Zendesk store (source of truth). Override with DATA_DIR.
     data_dir: Path = PROJECT_ROOT / "data" / "raw" / "zendesk"
+    # Workforce layer (agents, shifts, contracts) and regenerable analysis outputs.
+    wfm_dir: Path = PROJECT_ROOT / "data" / "raw" / "wfm"
     processed_dir: Path = PROJECT_ROOT / "data" / "processed"
+    profiles_dir: Path = PROJECT_ROOT / "data" / "processed" / "profiles"
 
     # AI providers (embeddings, clustering labels, copilot).
     openai_api_key: str | None = None
