@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+
+# Env / secrets
+.env
+.env.local
+*.pem
+*.key
+
+# AI pipeline outputs (regenerable) — keep the folder, ignore contents
+data/processed/*
+!data/processed/.gitkeep
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# NOTE: data/raw/ (the frozen Zendesk dataset) IS tracked — it is the source of truth.

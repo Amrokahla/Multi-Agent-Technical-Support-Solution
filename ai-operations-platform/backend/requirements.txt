@@ -1,0 +1,16 @@
+# Web
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+pydantic-settings>=2.3
+python-dotenv>=1.0
+httpx>=0.27
+
+# AI / data (SLA-risk ML, root-cause clustering, embeddings, copilot)
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.4
+openai>=1.40
+
+# Dev
+pytest>=8.0

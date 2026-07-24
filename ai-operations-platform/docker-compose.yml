@@ -1,0 +1,25 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - ENVIRONMENT=development
+      - DATA_DIR=/app/data/raw/zendesk
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - CORS_ORIGINS=["http://localhost:5173"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend

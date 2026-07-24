@@ -1,0 +1,93 @@
+:root {
+  --bg: #0f1420;
+  --panel: #171d2b;
+  --border: #263149;
+  --text: #e7ecf3;
+  --muted: #8b98ad;
+  --accent: #4f8cff;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 20px 16px;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 24px;
+}
+
+.nav a {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.nav a.active {
+  background: rgba(79, 140, 255, 0.12);
+  color: var(--text);
+}
+
+.content {
+  padding: 32px 40px;
+}
+
+h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: #ff7a7a;
+}
+
+.cards {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 22px;
+  min-width: 160px;
+}
+
+.card-value {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.card-label {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
