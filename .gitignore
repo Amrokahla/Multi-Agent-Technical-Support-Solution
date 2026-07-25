@@ -14,6 +14,7 @@ venv/
 .ruff_cache/
 .mypy_cache/
 *.egg-info/
+tests
 
 # Node / frontend
 node_modules/
@@ -28,6 +29,9 @@ data/
 *.npy
 *.joblib
 AI Assessment.pdf
+presentation
+docs-ig
+plan
 
 # Local infra
 docker-compose.override.yml
