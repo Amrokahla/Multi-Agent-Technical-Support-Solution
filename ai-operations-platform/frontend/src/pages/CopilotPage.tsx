@@ -92,9 +92,21 @@ export default function CopilotPage({
         {exchanges.map((e) => (
           <div className="exchange" key={e.id}>
             <div className="q-bubble">{e.question}</div>
-            {e.pending && <Dots />}
+            {e.streaming && !e.answer && (
+              <div className="thinking-line">
+                <Dots />
+                {e.status && <span className="thinking-status">{e.status}</span>}
+              </div>
+            )}
+            {(e.answer || e.response) && (
+              <AgentAnswer
+                answer={e.answer}
+                streaming={e.streaming}
+                response={e.response}
+                onOpenAnalytics={(link) => onOpenView(link.href.replace(/^.*#/, ""))}
+              />
+            )}
             {e.error && <div className="answer-error">Copilot unavailable — {e.error}</div>}
-            {e.response && <AgentAnswer response={e.response} onOpenAnalytics={(link) => onOpenView(link.href.replace(/^.*#/, ""))} />}
           </div>
         ))}
       </div>

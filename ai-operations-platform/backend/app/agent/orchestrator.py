@@ -5,11 +5,15 @@ diagnose via analyze_tickets -> assess -> recommend), feeding each tool result
 back so it can decide the next step. GPT-5-mini then writes a structured markdown
 answer from the accumulated results. Session memory arrives as `history`. Every
 number still comes from a tool; a grounding guardrail enforces it.
+
+answer() is the blocking path (kept for the fallback endpoint + tests); answer_stream()
+yields the same turn as (event, payload) pairs so the response streams to the browser.
 """
 
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 
 from app.agent.guardrails import enforce_grounding
 from app.agent.prompts import PLANNER_SYSTEM, SYNTH_SYSTEM, reports_prefix, synth_prompt
@@ -79,19 +83,57 @@ def _fallback_answer(trace: list[ToolTraceEntry]) -> str:
     return f"Analysis ran ({tools}), but the summary could not be generated. Open the linked analytics for details."
 
 
-def answer(question: str, history: list[dict] | None = None, provider=None) -> AgentResponse:
-    provider = provider or get_provider()
+# --- Shared pieces so the blocking and streaming paths can't drift -----------
+
+def _setup(question: str, history: list[dict] | None):
+    """Build the planner message stack + the stable reports prefix for a turn."""
     registry = get_registry()
     tools = registry.schemas()
     history = history or []
-
     # Standing reports as a stable prefix: the agent answers from these and only
     # calls tools for deeper investigation. Stable across turns -> prompt-cached.
     report_snapshot = reports.reports_context()
     reports_msg = {"role": "system", "content": reports_prefix(report_snapshot)}
-
     messages = [{"role": "system", "content": PLANNER_SYSTEM}, reports_msg, *history,
                 {"role": "user", "content": question}]
+    return registry, tools, report_snapshot, reports_msg, history, messages
+
+
+def _dispatch(registry, call: ToolCall, trace: list[ToolTraceEntry], messages: list[dict]) -> ToolTraceEntry:
+    """Run one tool call, record it in the trace, and feed the result back to the planner."""
+    result = registry.dispatch(call.name, call.arguments)
+    ok = isinstance(result, dict) and "error" not in result
+    entry = ToolTraceEntry(
+        tool=call.name, arguments=call.arguments, ok=ok,
+        result=result if ok else None, error=None if ok else result.get("error"),
+    )
+    trace.append(entry)
+    messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)[:TOOL_RESULT_CHARS]})
+    return entry
+
+
+def _synth_messages(reports_msg: dict, history: list[dict], question: str, trace: list[ToolTraceEntry]) -> list[dict]:
+    ok_results = [{"tool": t.tool, "arguments": t.arguments, "result": t.result} for t in trace if t.ok]
+    return [{"role": "system", "content": SYNTH_SYSTEM}, reports_msg, *history,
+            {"role": "user", "content": synth_prompt(question, ok_results)}]
+
+
+def _finalize(question, draft, trace, provider, synth_messages, report_snapshot) -> AgentResponse:
+    """Ground the draft (or fall back) and build the response — identical for both paths."""
+    if draft.strip():
+        final, grounded = enforce_grounding(draft, trace, provider, synth_messages, extra=[report_snapshot])
+    else:
+        final, grounded = _fallback_answer(trace), True
+    return AgentResponse(
+        question=question, answer=final, tool_trace=trace,
+        analytics_links=_analytics_links([t.tool for t in trace if t.ok]),
+        caveats=_caveats(trace), models_used=_models(), grounding_ok=grounded,
+    )
+
+
+def answer(question: str, history: list[dict] | None = None, provider=None) -> AgentResponse:
+    provider = provider or get_provider()
+    registry, tools, report_snapshot, reports_msg, history, messages = _setup(question, history)
     trace: list[ToolTraceEntry] = []
 
     for _ in range(MAX_ROUNDS):
@@ -100,27 +142,49 @@ def answer(question: str, history: list[dict] | None = None, provider=None) -> A
             break
         messages.append(_assistant_toolcalls(calls, content))
         for call in calls:
-            result = registry.dispatch(call.name, call.arguments)
-            ok = isinstance(result, dict) and "error" not in result
-            trace.append(ToolTraceEntry(
-                tool=call.name, arguments=call.arguments, ok=ok,
-                result=result if ok else None, error=None if ok else result.get("error"),
-            ))
-            messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)[:TOOL_RESULT_CHARS]})
+            _dispatch(registry, call, trace, messages)
 
-    ok_results = [{"tool": t.tool, "arguments": t.arguments, "result": t.result} for t in trace if t.ok]
-    synth_messages = [{"role": "system", "content": SYNTH_SYSTEM}, reports_msg, *history,
-                      {"role": "user", "content": synth_prompt(question, ok_results)}]
+    synth_messages = _synth_messages(reports_msg, history, question, trace)
     draft = provider.synthesize(synth_messages)
     if not draft.strip():
         draft = provider.synthesize(synth_messages)
-    if draft.strip():
-        final, grounded = enforce_grounding(draft, trace, provider, synth_messages, extra=[report_snapshot])
-    else:
-        final, grounded = _fallback_answer(trace), True
+    return _finalize(question, draft, trace, provider, synth_messages, report_snapshot)
 
-    return AgentResponse(
-        question=question, answer=final, tool_trace=trace,
-        analytics_links=_analytics_links([t.tool for t in trace if t.ok]),
-        caveats=_caveats(trace), models_used=_models(), grounding_ok=grounded,
-    )
+
+def answer_stream(question: str, history: list[dict] | None = None, provider=None) -> Iterator[tuple[str, dict]]:
+    """Same turn as answer(), streamed as (event, payload) pairs.
+
+    Yields plan/tool_start/tool_end during the loop, synth then token deltas while
+    the synthesizer writes, and a final `done` with the authoritative AgentResponse.
+    Tokens stream optimistically; grounding may rewrite the answer, so `done` is the
+    source of truth the client reconciles to.
+    """
+    provider = provider or get_provider()
+    registry, tools, report_snapshot, reports_msg, history, messages = _setup(question, history)
+    trace: list[ToolTraceEntry] = []
+
+    for rnd in range(MAX_ROUNDS):
+        yield "plan", {"round": rnd + 1}
+        calls, content = provider.plan(messages, tools)
+        if not calls:
+            break
+        messages.append(_assistant_toolcalls(calls, content))
+        for call in calls:
+            index = len(trace)
+            yield "tool_start", {"index": index, "tool": call.name, "arguments": call.arguments}
+            entry = _dispatch(registry, call, trace, messages)
+            yield "tool_end", {"index": index, "tool": entry.tool, "ok": entry.ok, "error": entry.error}
+
+    synth_messages = _synth_messages(reports_msg, history, question, trace)
+    yield "synth", {}
+    parts: list[str] = []
+    for delta in provider.synthesize_stream(synth_messages):
+        if delta:
+            parts.append(delta)
+            yield "token", {"text": delta}
+    draft = "".join(parts)
+    if not draft.strip():  # empty stream -> one blocking retry, same as answer()
+        draft = provider.synthesize(synth_messages)
+
+    response = _finalize(question, draft, trace, provider, synth_messages, report_snapshot)
+    yield "done", response.model_dump()

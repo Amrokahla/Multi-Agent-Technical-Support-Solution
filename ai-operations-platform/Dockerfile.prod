@@ -17,7 +17,10 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     ENVIRONMENT=production \
-    DATA_DIR=/app/data/raw/zendesk
+    DATA_DIR=/app/data/raw/zendesk \
+    WFM_DIR=/app/data/raw/wfm \
+    PROCESSED_DIR=/app/data/processed \
+    PROFILES_DIR=/app/data/processed/profiles
 
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt

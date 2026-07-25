@@ -164,7 +164,10 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     ENVIRONMENT=production \
-    DATA_DIR=/app/data/raw/zendesk
+    DATA_DIR=/app/data/raw/zendesk \
+    WFM_DIR=/app/data/raw/wfm \
+    PROCESSED_DIR=/app/data/processed \
+    PROFILES_DIR=/app/data/processed/profiles
 
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
@@ -219,6 +222,9 @@ no `.env` file, so set these as App Settings / container env vars.
 | `OPENAI_API_KEY` | **yes** (for copilot) | — | your key (secret) |
 | `ENVIRONMENT` | no | `development` | `production` |
 | `DATA_DIR` | no | `…/data/raw/zendesk` | `/app/data/raw/zendesk` (set in image) |
+| `WFM_DIR` | no | `…/data/raw/wfm` | `/app/data/raw/wfm` (set in image — see note) |
+| `PROCESSED_DIR` | no | `…/data/processed` | `/app/data/processed` (set in image — see note) |
+| `PROFILES_DIR` | no | `…/data/processed/profiles` | `/app/data/processed/profiles` (set in image — see note) |
 | `PLANNER_MODEL` | no | `gpt-5` | `gpt-5` |
 | `SYNTH_MODEL` | no | `gpt-5-mini` | `gpt-5-mini` |
 | `OPENAI_MODEL` | no | `gpt-5-mini` | `gpt-5-mini` |
@@ -228,6 +234,13 @@ no `.env` file, so set these as App Settings / container env vars.
 
 Same-origin single-container deploys don't strictly need `CORS_ORIGINS`, but set it to
 your public URL anyway — harmless, and correct if you later split the frontend out.
+
+> **Why `WFM_DIR` / `PROCESSED_DIR` / `PROFILES_DIR` must be set explicitly.** `config.py`
+> derives its default data paths from `PROJECT_ROOT = Path(__file__).parents[2]`, which is
+> correct in the repo layout (`…/backend/app/config.py`) but resolves to `/` in the image
+> (`/app/app/config.py`). `DATA_DIR` alone isn't enough — the other three dirs fall back to
+> the broken `/data/...` default and the pipeline 500s on the first sync. The `Dockerfile.prod`
+> above sets all four, so a fresh build needs no extra app settings.
 
 ### 4.5 The single-instance rule (repeat, because it matters)
 

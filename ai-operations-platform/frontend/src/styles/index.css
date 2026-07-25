@@ -1344,6 +1344,37 @@ body {
   border-radius: 4px;
 }
 
+/* Blinking caret on the last line while the answer is still streaming in. */
+.answer-body.streaming > *:last-child::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: text-bottom;
+  background: var(--signal);
+  animation: caretBlink 1s steps(1) infinite;
+}
+
+@keyframes caretBlink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Inline "working" line shown before the first token arrives. */
+.thinking-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.thinking-status {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .answer-foot {
   display: flex;
   align-items: center;

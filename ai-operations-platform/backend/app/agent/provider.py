@@ -7,6 +7,7 @@ small interface so tests inject a mock and the backend never needs a key offline
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -49,6 +50,19 @@ class OpenAIProvider:
             model=self._synth, messages=messages, max_completion_tokens=6000,
         )
         return resp.choices[0].message.content or ""
+
+    def synthesize_stream(self, messages: list[dict]) -> Iterator[str]:
+        # Same call as synthesize, streamed: yields the answer text deltas as they
+        # arrive. Reasoning tokens are consumed internally; only delta.content is text.
+        stream = self._client.chat.completions.create(
+            model=self._synth, messages=messages, max_completion_tokens=6000, stream=True,
+        )
+        for chunk in stream:
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta.content
+            if delta:
+                yield delta
 
 
 def _parse_args(raw: str | None) -> dict:
