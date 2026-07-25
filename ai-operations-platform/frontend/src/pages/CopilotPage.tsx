@@ -73,7 +73,7 @@ export default function CopilotPage({
         <h1 className="copilot-title">Ask the operation.</h1>
         <p className="copilot-sub">
           Answers come from your synced reports and <b>deterministic tools</b>. Open any report from
-          the left; watch the tools run on the right.
+          the left for the full analytics.
         </p>
       </header>
 

@@ -2,11 +2,10 @@ import { useState } from "react";
 import { useReports } from "../hooks/useReports";
 import { useConversation } from "../hooks/useConversation";
 import ReportsBar from "../components/ReportsBar";
-import ThinkingBar from "../components/ThinkingBar";
 import AnalyticsModal from "../components/AnalyticsModal";
 import CopilotPage from "../pages/CopilotPage";
 
-// App shell: reports bar (left) · chat (center) · thinking process (right).
+// App shell: reports bar (left) · chat (center).
 export default function Shell() {
   const { bundle, syncing, error, sync } = useReports();
   const convo = useConversation();
@@ -26,7 +25,6 @@ export default function Shell() {
           busy={convo.busy}
         />
       </main>
-      <ThinkingBar exchanges={convo.exchanges} />
       <AnalyticsModal view={view} bundle={bundle} onClose={() => setView(null)} />
     </div>
   );
