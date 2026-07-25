@@ -1,0 +1,32 @@
+# Production image: builds the React frontend, then serves it + the FastAPI API
+# from one Python container with the data and model bundled in.
+# Build context is the project root:  docker build -f Dockerfile.prod .
+
+# ---- Stage 1: build the React frontend ----
+FROM node:20-alpine AS frontend
+WORKDIR /web
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm install
+COPY frontend/ ./
+# Vite outputs to /web/dist
+RUN npm run build
+
+# ---- Stage 2: backend + bundled data + static frontend ----
+FROM python:3.12-slim
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    ENVIRONMENT=production \
+    DATA_DIR=/app/data/raw/zendesk
+
+COPY backend/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY backend/app ./app
+# Zendesk store + sla_model.pkl + profiles
+COPY data ./data
+# Built frontend, served at "/"
+COPY --from=frontend /web/dist ./web
+
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

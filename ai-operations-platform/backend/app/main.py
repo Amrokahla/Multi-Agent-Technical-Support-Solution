@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.config import get_settings
@@ -21,9 +24,17 @@ def create_app() -> FastAPI:
     )
     app.include_router(api_router, prefix="/api")
 
-    @app.get("/")
-    def root() -> dict:
-        return {"service": settings.app_name, "status": "ok"}
+    # In the production image the built frontend is copied to /app/web and served
+    # at "/" from this same process (one origin, no CORS). In dev that folder does
+    # not exist, so the API-only app keeps its JSON root.
+    web_dir = Path(__file__).resolve().parent.parent / "web"
+    if web_dir.exists():
+        app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
+    else:
+
+        @app.get("/")
+        def root() -> dict:
+            return {"service": settings.app_name, "status": "ok"}
 
     return app
 

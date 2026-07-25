@@ -1,0 +1,18 @@
+# Keep the build context (and image) lean. data/ is intentionally NOT ignored —
+# the app needs it at runtime and it is bundled into the image.
+**/.venv
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+frontend/dist
+backend/notebooks
+.git
+.gitignore
+*.md
+docs
+plan
+scripts
+.env
+.env.local
+.DS_Store
