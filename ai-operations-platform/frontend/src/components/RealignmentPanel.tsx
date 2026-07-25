@@ -20,11 +20,11 @@ export default function RealignmentPanel({ o }: { o: OptimizerResult }) {
         <div className="panel-title">Supply vs demand · before → after</div>
         <div className="rz-legend">
           <span>
-            <i style={{ background: "rgba(255,90,95,0.42)", border: "1px solid rgba(255,90,95,0.6)" }} />
+            <i style={{ background: "rgba(199,123,114,0.42)", border: "1px solid rgba(199,123,114,0.6)" }} />
             current supply
           </span>
           <span>
-            <i style={{ background: "rgba(52,225,196,0.75)" }} />
+            <i style={{ background: "rgba(134,185,176,0.75)" }} />
             optimized supply
           </span>
           <span>
@@ -71,11 +71,11 @@ export default function RealignmentPanel({ o }: { o: OptimizerResult }) {
           <span>Reassignment plan · {o.moves} moves</span>
           <span className="legend">
             <span>
-              <i style={{ background: "rgba(52,225,196,0.5)" }} />
+              <i style={{ background: "rgba(134,185,176,0.5)" }} />
               {o.reassign} reassign
             </span>
             <span>
-              <i style={{ background: "rgba(244,183,64,0.5)" }} />
+              <i style={{ background: "rgba(194,160,104,0.5)" }} />
               {o.cross_train} cross-train
             </span>
           </span>

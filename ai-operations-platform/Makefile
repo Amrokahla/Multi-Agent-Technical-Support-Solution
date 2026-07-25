@@ -72,6 +72,14 @@ build: frontend/node_modules ## Production build of the frontend
 verify: $(VENV) ## Validate the frozen Zendesk dataset
 	$(PY) scripts/verify_data.py
 
+.PHONY: train-sla
+train-sla: $(VENV) ## Train + pickle the SLA-risk model
+	cd backend && .venv/bin/python -c "from app.ai.sla.model import train, save; print('wrote', save(train()))"
+
+.PHONY: agent-demo
+agent-demo: $(VENV) ## Ask the copilot the flagship question (needs OPENAI_API_KEY)
+	cd backend && .venv/bin/python -c "from app.agent.orchestrator import answer; r=answer('We expect 30% more tickets tomorrow. Can we still meet SLA with 24 agents?'); print('\nANSWER:\n'+r.answer); print('\nTOOLS:'); [print(' -', t.tool, t.arguments, 'OK' if t.ok else t.error) for t in r.tool_trace]; print('\ngrounded:', r.grounding_ok)"
+
 # ---------------------------------------------------------------------------
 # Docker
 # ---------------------------------------------------------------------------

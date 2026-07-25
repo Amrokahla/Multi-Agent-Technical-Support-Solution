@@ -47,8 +47,8 @@ export default function IntradayPanel({ c }: { c: CapacityResult }) {
         {[0.25, 0.5, 0.75].map((g) => (
           <line key={g} className="gridline" x1={0} y1={PADY + innerH * g} x2={W} y2={PADY + innerH * g} />
         ))}
-        <path d={area("required")} fill="rgba(255,90,95,0.16)" />
-        <path d={area("available")} fill="rgba(52,225,196,0.14)" />
+        <path d={area("required")} fill="rgba(199,123,114,0.16)" />
+        <path d={area("available")} fill="rgba(134,185,176,0.14)" />
         <polyline points={line("required")} fill="none" stroke="var(--deficit)" strokeWidth={2} />
         <polyline points={line("available")} fill="none" stroke="var(--signal)" strokeWidth={2} />
         <line x1={peakX} y1={PADY - 6} x2={peakX} y2={H - PADY} stroke="var(--demand)" strokeWidth={1} strokeDasharray="3 3" opacity={0.7} />

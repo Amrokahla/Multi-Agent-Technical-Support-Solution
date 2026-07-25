@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api import health, wfm
+from app.api import agent, health, reports, wfm
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["health"])
 api_router.include_router(wfm.router, prefix="/wfm", tags=["workforce"])
+api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
+api_router.include_router(agent.router, prefix="/agent", tags=["copilot"])
 
 # Roadmap — one router per AI feature:
 #   api_router.include_router(risk.router, prefix="/risk", tags=["sla-risk"])

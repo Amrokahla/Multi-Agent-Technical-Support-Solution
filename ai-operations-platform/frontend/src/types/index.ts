@@ -142,3 +142,59 @@ export interface UploadMeta {
 export interface AnalyzeResult extends WfmBundle {
   meta: UploadMeta;
 }
+
+// --- Copilot agent (/api/agent/ask) ------------------------------------------
+
+export interface ToolTraceEntry {
+  tool: string;
+  arguments: Record<string, unknown>;
+  ok: boolean;
+  result: Record<string, unknown> | null;
+  error: string | null;
+}
+
+export interface AnalyticsLink {
+  label: string;
+  href: string;
+}
+
+export interface AgentResponse {
+  question: string;
+  answer: string;
+  tool_trace: ToolTraceEntry[];
+  analytics_links: AnalyticsLink[];
+  caveats: string[];
+  models_used: { planner?: string; synthesizer?: string };
+  grounding_ok: boolean;
+}
+
+// --- Reports bundle (/api/reports) -------------------------------------------
+
+export interface InsightsData {
+  headline: string;
+  kpis: { name: string; unit: string; current: number; change_pct: number; direction: string; favorable: boolean | null }[];
+  anomalies: { metric: string; week: string; value: number; deviation: number }[];
+  drivers: { metric: string; dimension: string; segments: { segment: string; contribution: number }[] }[];
+}
+
+export interface ClientRow {
+  organization_id: number;
+  client: string;
+  tickets: number;
+  share_pct: number;
+  per_day: number;
+  dedicated: boolean;
+  trend_pct: number | null;
+}
+
+export interface ClientsData {
+  total_tickets: number;
+  clients: ClientRow[];
+  concentration: { top1_share_pct: number; top3_share_pct: number; is_concentrated: boolean; top1_vs_uniform: number | null };
+}
+
+export interface ReportsBundle extends WfmBundle {
+  synced_at: string;
+  insights: InsightsData;
+  clients: ClientsData;
+}

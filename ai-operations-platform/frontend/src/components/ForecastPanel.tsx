@@ -28,7 +28,7 @@ export default function ForecastPanel({ f }: { f: ForecastResult }) {
           <span>Daily demand · H2 backtest</span>
           <span className="legend">
             <span>
-              <i style={{ background: "var(--demand)" }} />
+              <i style={{ background: "var(--deficit)" }} />
               actual
             </span>
             <span>
@@ -42,7 +42,7 @@ export default function ForecastPanel({ f }: { f: ForecastResult }) {
           {gridYs.map((y, i) => (
             <line key={i} className="gridline" x1={0} y1={y} x2={W} y2={y} />
           ))}
-          <polyline points={actualPts} fill="none" stroke="var(--demand)" strokeWidth={1.4} opacity={0.7} />
+          <polyline points={actualPts} fill="none" stroke="var(--deficit)" strokeWidth={1.6} opacity={0.9} />
           <polyline points={forecastPts} fill="none" stroke="var(--signal)" strokeWidth={2} />
         </svg>
         <p className="chart-caption">

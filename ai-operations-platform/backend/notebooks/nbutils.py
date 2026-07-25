@@ -88,3 +88,45 @@ def daily_demand(tickets: pd.DataFrame) -> pd.Series:
     counts = tickets.set_index("created_at").resample("D").size()
     full = pd.date_range(counts.index.min().normalize(), counts.index.max().normalize(), freq="D")
     return counts.reindex(full, fill_value=0).astype(float)
+
+
+# --- SLA risk (notebook 05) --------------------------------------------------
+
+def load_sla_events() -> pd.DataFrame:
+    return pd.DataFrame(_jsonl(STORE / "ticket_metric_events.jsonl"))
+
+
+def sla_targets() -> dict:
+    """(priority, metric) -> target minutes, mapping policy metric names to event names."""
+    rename = {"first_reply_time": "reply_time", "total_resolution_time": "resolution_time"}
+    policy = json.loads((STORE / "sla_policies.json").read_text())[0]["policy_metrics"]
+    return {(p["priority"], rename[p["metric"]]): p["target"] for p in policy}
+
+
+def build_sla_frame() -> pd.DataFrame:
+    """One row per resolved SLA metric instance (breach/fulfill), leakage-safe features.
+
+    Features are only what is known at ticket arrival — no reply/resolution times,
+    replies, reopens or wait times (those are outcomes that determine the label).
+    """
+    tickets = load_tickets()
+    events = load_sla_events()
+    events = events[events["type"].isin(["breach", "fulfill"])].copy()
+    events["label"] = (events["type"] == "breach").astype(int)
+
+    cols = ["id", "priority", "type", "group_id", "organization_id", "created_at", "locale", "tags", "via"]
+    tk = tickets[cols].rename(columns={"type": "ticket_type"})
+    frame = events[["ticket_id", "metric", "instance_id", "label"]].merge(
+        tk, left_on="ticket_id", right_on="id", how="left"
+    )
+
+    frame["hour"] = frame["created_at"].dt.hour
+    frame["weekday"] = frame["created_at"].dt.dayofweek
+    frame["month"] = frame["created_at"].dt.month
+    frame["is_weekend"] = (frame["weekday"] >= 5).astype(int)
+    frame["channel"] = frame["via"].apply(lambda v: v.get("channel") if isinstance(v, dict) else None)
+    frame["n_tags"] = frame["tags"].apply(lambda x: len(x) if isinstance(x, list) else 0)
+    targets = sla_targets()
+    frame["sla_target_min"] = [targets.get((p, m)) for p, m in zip(frame["priority"], frame["metric"])]
+    frame["queue"] = frame["group_id"].map(groups())
+    return frame

@@ -1,12 +1,14 @@
 // Thin fetch client for the backend API.
 
 import type {
+  AgentResponse,
   AnalyzeResult,
   CapacityResult,
   CoverageResult,
   DatasetManifest,
   ForecastResult,
   OptimizerResult,
+  ReportsBundle,
   WfmBundle,
   WfmSummary,
 } from "../types";
@@ -62,5 +64,32 @@ export const api = {
       api.wfmOptimize(),
     ]);
     return { summary, forecast, capacity, coverage, optimizer };
+  },
+
+  // Reports — Sync runs the pipeline once and returns the cached bundle.
+  syncReports: async (): Promise<ReportsBundle> => {
+    const r = await fetch(`${BASE}/reports/sync`, { method: "POST" });
+    if (!r.ok) throw new Error(`Sync failed (${r.status})`);
+    return (await r.json()) as ReportsBundle;
+  },
+  getReports: () => getJSON<ReportsBundle>("/reports"),
+
+  // Copilot — natural-language question to the orchestrator agent (with session memory).
+  async askCopilot(question: string, history: { role: string; content: string }[] = []): Promise<AgentResponse> {
+    const response = await fetch(`${BASE}/agent/ask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, history: history.slice(-20) }),
+    });
+    if (!response.ok) {
+      let detail = `Copilot request failed (${response.status})`;
+      try {
+        detail = (await response.json()).detail ?? detail;
+      } catch {
+        /* keep default */
+      }
+      throw new Error(detail);
+    }
+    return (await response.json()) as AgentResponse;
   },
 };
