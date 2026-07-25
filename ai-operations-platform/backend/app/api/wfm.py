@@ -1,19 +1,33 @@
-"""Workforce-optimization endpoints — the four pipeline stages + a summary."""
+"""Workforce-optimization endpoints — the four pipeline stages, a summary, and
+the CSV-upload path that runs the same pipeline on an uploaded ticket export."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from pathlib import Path
 
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+
+from app.ai.wfm import upload as upload_pipeline
+from app.ai.wfm.upload import UploadError
 from app.schemas.wfm import (
+    AnalyzeResult,
     CapacityResult,
     CoverageResult,
     ForecastResult,
     OptimizerResult,
     WfmSummary,
 )
+from app.config import get_settings
 from app.services import wfm
 
 router = APIRouter()
+
+MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+
+
+def _sample_path() -> Path:
+    return get_settings().data_dir.parent.parent / "sample" / "zendesk_tickets_sample.csv"
 
 
 @router.get("/summary", response_model=WfmSummary)
@@ -44,3 +58,33 @@ def coverage() -> dict:
 def optimize() -> dict:
     """Step 4 — before/after supply vs demand and the reassignment recommendations."""
     return wfm.get_optimization()
+
+
+@router.post("/analyze", response_model=AnalyzeResult)
+async def analyze(file: UploadFile = File(...)) -> dict:
+    """Run the full pipeline on an uploaded Zendesk-style ticket CSV."""
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File is larger than 25 MB.")
+    try:
+        return upload_pipeline.analyze(content, source=file.filename or "upload.csv")
+    except UploadError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+
+
+@router.get("/sample", response_model=AnalyzeResult)
+def sample() -> dict:
+    """Run the pipeline on the bundled sample export (the 'Load sample' button)."""
+    path = _sample_path()
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Sample dataset not found.")
+    return upload_pipeline.analyze(path.read_bytes(), source="zendesk_tickets_sample.csv")
+
+
+@router.get("/sample.csv")
+def sample_csv() -> FileResponse:
+    """Download the raw sample export so users can see the expected CSV format."""
+    path = _sample_path()
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Sample dataset not found.")
+    return FileResponse(path, media_type="text/csv", filename="zendesk_tickets_sample.csv")

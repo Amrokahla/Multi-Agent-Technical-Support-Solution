@@ -164,3 +164,29 @@ class WfmSummary(BaseModel):
     capacity: CapacitySummary
     coverage: CoverageSummary
     optimizer: OptimizerSummary
+
+
+# --- CSV upload ---------------------------------------------------------------
+
+class UploadMeta(BaseModel):
+    source: str
+    roster_modeled: bool
+    rows_parsed: int
+    tickets_used: int
+    date_start: str
+    date_end: str
+    ndays: int
+    skills: list[str]
+    agents_modeled: int
+    scale_factor: float
+    columns: dict[str, str]
+    warnings: list[str]
+
+
+class AnalyzeResult(BaseModel):
+    summary: WfmSummary
+    forecast: ForecastResult
+    capacity: CapacityResult
+    coverage: CoverageResult
+    optimizer: OptimizerResult
+    meta: UploadMeta

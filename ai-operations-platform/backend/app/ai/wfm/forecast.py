@@ -48,8 +48,12 @@ def run(demand: pd.Series) -> dict:
     naive = test.index.dayofweek.map(weekday_mean).values
     models.append(_score("seasonal-naive", naive, actual))
 
-    holt = ExponentialSmoothing(train, trend="add", seasonal="add", seasonal_periods=7).fit()
-    models.append(_score("Holt-Winters(m=7)", holt.forecast(len(test)).values, actual))
+    # Holt-Winters needs a couple of full weekly cycles; skip it on short inputs.
+    try:
+        holt = ExponentialSmoothing(train, trend="add", seasonal="add", seasonal_periods=7).fit()
+        models.append(_score("Holt-Winters(m=7)", holt.forecast(len(test)).values, actual))
+    except Exception:  # noqa: BLE001 - short/degenerate series; other models still run
+        pass
 
     gbm = HistGradientBoostingRegressor(max_iter=300, learning_rate=0.05, max_depth=4)
     gbm.fit(_calendar_features(train.index), train.values)

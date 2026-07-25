@@ -10,49 +10,8 @@ from __future__ import annotations
 from functools import lru_cache
 
 from app.ai.wfm import capacity, coverage, forecast, loaders, optimizer
+from app.ai.wfm.summarize import build_summary
 from app.ai.wfm.workload import build_context
-
-
-def _chosen_score(forecast_result: dict) -> dict:
-    chosen = forecast_result["chosen_model"]
-    return next(m for m in forecast_result["models"] if m["model"] == chosen)
-
-
-def _build_summary(now, ctx, fc: dict, cap: dict, cov: dict, opt: dict) -> dict:
-    score = _chosen_score(fc)
-    worst = cov["skills"][0]  # skills are sorted most-negative gap first
-    return {
-        "as_of": now.isoformat(),
-        "window_days": ctx.ndays,
-        "scale_factor": ctx.scale_factor,
-        "forecast": {
-            "chosen_model": fc["chosen_model"],
-            "mae": score["mae"],
-            "mape": score["mape"],
-            "noise_floor_mae": fc["noise_floor_mae"],
-            "at_noise_floor": score["mae"] <= fc["noise_floor_mae"] * 1.15,
-        },
-        "capacity": {
-            "understaffed_pct": cap["understaffed_pct"],
-            "overstaffed_pct": cap["overstaffed_pct"],
-            "peak_hour": cap["peak_hour"],
-        },
-        "coverage": {
-            "net_shortage_agent_hours": cov["net_shortage_agent_hours"],
-            "understaffed_cells": cov["understaffed_cells"],
-            "total_cells": cov["total_cells"],
-            "worst_skill": worst["skill"],
-            "worst_gap": worst["gap"],
-        },
-        "optimizer": {
-            "unmet_before": opt["unmet_before"],
-            "unmet_after": opt["unmet_after"],
-            "reduction_pct": opt["reduction_pct"],
-            "moves": opt["moves"],
-            "reassign": opt["reassign"],
-            "cross_train": opt["cross_train"],
-        },
-    }
 
 
 @lru_cache(maxsize=1)
@@ -73,7 +32,7 @@ def _analysis() -> dict:
     cap = capacity.run(ctx)
     cov = coverage.run(ctx, tickets, agent_areas, group_names, contracts)
     opt = optimizer.run(ctx, agent_areas, group_names, home_groups)
-    summary = _build_summary(now, ctx, fc, cap, cov, opt)
+    summary = build_summary(now.isoformat(), ctx.ndays, ctx.scale_factor, fc, cap, cov, opt)
 
     return {"forecast": fc, "capacity": cap, "coverage": cov, "optimizer": opt, "summary": summary}
 

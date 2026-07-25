@@ -33,31 +33,29 @@ app under `.parked/data-generation/` (kept out of the project for cleanliness).
 
 ## Run
 
-### Backend
+Everything is driven from the `Makefile` — run `make` (or `make help`) to list targets.
+
 ```bash
-cd backend
-python -m pip install -r requirements.txt
-cp .env.example .env          # add OPENAI_API_KEY for AI features
-uvicorn app.main:app --reload # http://localhost:8000  (docs at /docs)
-pytest                        # smoke tests
+make dev        # backend :8000 + frontend :5173 together (Ctrl-C stops both)
 ```
 
-### Frontend
-```bash
-cd frontend
-npm install
-npm run dev                   # http://localhost:5173  (proxies /api to :8000)
-```
+First run bootstraps the backend virtualenv (`backend/.venv`) and installs
+frontend deps automatically. For AI features, add `OPENAI_API_KEY` to
+`backend/.env` (`cp backend/.env.example backend/.env`).
 
-### Docker
-```bash
-docker compose up --build     # backend :8000, frontend :5173
-```
+| Command | What it does |
+|---|---|
+| `make dev` | Run backend + frontend together (auto-installs on first run) |
+| `make dev-backend` / `make dev-frontend` | Run one side only |
+| `make install` | Install backend + frontend dependencies |
+| `make test` | Backend tests (pytest) |
+| `make typecheck` | Frontend type-check (`tsc --noEmit`) |
+| `make build` | Production build of the frontend |
+| `make verify` | Validate the frozen Zendesk dataset |
+| `make docker` / `make down` | Run / stop the full stack in Docker Compose |
+| `make clean` / `make clean-all` | Remove build caches / also venv + node_modules |
 
-### Verify the data
-```bash
-python scripts/verify_data.py
-```
+Ports and interpreter are overridable, e.g. `make dev BACKEND_PORT=8080 PYBOOT=python3.12`.
 
 ## Health check
 - `GET /` → service status

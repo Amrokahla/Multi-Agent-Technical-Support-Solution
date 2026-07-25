@@ -58,3 +58,28 @@ def test_summary_forecast_at_noise_floor():
     assert body["forecast"]["at_noise_floor"] is True
     assert body["scale_factor"] == 15.5
     assert body["coverage"]["worst_skill"].startswith("Tier 1")
+
+
+def test_sample_upload_runs_full_pipeline():
+    body = client.get("/api/wfm/sample").json()
+    assert body["meta"]["roster_modeled"] is True
+    assert body["meta"]["tickets_used"] == 8000
+    assert body["meta"]["agents_modeled"] > 0
+    # The full pipeline populated every stage.
+    assert body["optimizer"]["reduction_pct"] > 0
+    assert len(body["coverage"]["gap_matrix"]["values"]) == 24
+
+
+def test_analyze_detects_columns_and_runs():
+    dates = [f"2026-01-{d:02d}T09:00:00Z" for d in range(1, 29)]
+    rows = "\n".join(f"{d},Support" if i % 2 else f"{d},Billing" for i, d in enumerate(dates))
+    csv = f"Created at,Group\n{rows}\n".encode()
+    resp = client.post("/api/wfm/analyze", files={"file": ("export.csv", csv, "text/csv")})
+    assert resp.status_code == 200
+    assert resp.json()["meta"]["columns"]["created_at"] == "Created at"
+
+
+def test_analyze_rejects_csv_without_date():
+    resp = client.post("/api/wfm/analyze", files={"file": ("bad.csv", b"a,b\n1,2\n", "text/csv")})
+    assert resp.status_code == 422
+    assert "created" in resp.json()["detail"].lower()
